@@ -52,10 +52,58 @@
         return d.getElementById(id);
     }
 
-    var i = function(){}
-        ,three = function(){};
+    function log(){
+        var t = Array.prototype.slice.call(arguments);
+        console.info.call(console, '%c TreeJS Debug : ','background: #ff508e; color: #fff;padding:5px', t.join(' '));
+    }
 
-    three.prototype.init = function(obj,options){
+    function extend() {
+      var a = arguments, target = a[0] || {}, i = 1, l = a.length, deep = false, options;
+
+      if (typeof target === 'boolean') {
+        deep = target;
+        target = a[1] || {};
+        i = 2;
+      }
+
+      if (typeof target !== 'object' && !isFunction(target)) target = {};
+
+      for (; i < l; ++i) {
+        if ((options = a[i]) != null) {
+          for (var name in options) {
+            var src = target[name], copy = options[name];
+
+            if (target === copy) continue;
+
+            if (deep && copy && typeof copy === 'object' && !copy.nodeType) {
+              target[name] = extend(deep, src || (copy.length != null ? [] : {}), copy);
+            } else if (copy !== undefined) {
+              target[name] = copy;
+            }
+          }
+        }
+      }
+
+      return target;
+    }
+    function walk_top(n){
+        var tmp = n;
+        while (tmp.parents.length){
+            tmp.parents[0].childNodes.push(n);
+            tmp = tmp.parents[0];
+        }
+    }
+
+    var i = function(){}
+        ,tree = function(){}
+        ,defaults = {
+            debug:!0,
+            data:[],
+            checkbox: !1,
+            container: document.getElementsByTagName('body')[0]
+        };
+
+    tree.prototype.init = function(obj,options){
 
         var node;
 
@@ -92,15 +140,15 @@
         return this;
     };
 
-    three.prototype.onDeleteHandler = function(e){
+    tree.prototype.onDeleteHandler = function(e){
         this.deleteBtnCallback(e,this);
     };
 
-    three.prototype.hide = function(){
+    tree.prototype.hide = function(){
         this.main_list.classList.add('hidden');
     };
 
-    three.prototype.onClick = function(){
+    tree.prototype.onClick = function(){
 
         this.expanded = !this.expanded;
         if (this.expanded) {
@@ -118,11 +166,11 @@
         }
     };
 
-    three.prototype.pushParent = function(parents){
+    tree.prototype.pushParent = function(parents){
         this.parents.push(parents);
     };
 
-    three.prototype.onSelect = function(e,state) {
+    tree.prototype.onSelect = function(e,state) {
         this.selected = state !== undefined ? state : !this.selected;
         this.used.checked = this.selected;
 
@@ -135,7 +183,7 @@
         } this.checkbox_callback(this.selected,hashes); this.checkParents();
     };
 
-    three.prototype.checkParents = function(){
+    tree.prototype.checkParents = function(){
         var node =  this.parents;
         while(node.length) {
             for(var j=0,ln=node.length;j<ln;j++) {
@@ -150,51 +198,47 @@
 
     };
 
-    three.prototype.addChild = function(clone){
+    tree.prototype.addChild = function(clone){
         this.btn.classList.remove('hidden');
         clone.pushParent(this);
         walk_top(clone);
         this.main_list.childNodes[0].appendChild(clone.el());
     };
 
-    function walk_top(n){
-        var tmp = n;
-        while (tmp.parents.length){
-            tmp.parents[0].childNodes.push(n);
-            tmp = tmp.parents[0];
-        }
-    }
-
-    three.prototype.id = function(){
+    tree.prototype.id = function(){
         return this.data.self;
     };
 
-    three.prototype._id = function(){
+    tree.prototype._id = function(){
         return this.data.id;
     };
 
-    three.prototype.isSelected = function(){
+    tree.prototype.isSelected = function(){
         return this.selected;
     };
 
-    three.prototype.top = function(){
+    tree.prototype.top = function(){
         return this.data.top;
     };
 
-    three.prototype.el = function(){
+    tree.prototype.el = function(){
         return this.main_list;
     };
 
-    i.prototype.init = function(container,data,options){
+    i.prototype.init = function(options){
 
-        this.data = data;
+        options = extend(defaults,options);
+
+        log('called with options',options);
+
+        this.data = options.data;
         this.collection = {};
         this.iterate = 0;
 
         for(var item in this.data){
-            if(this.data[item].parent && (this.data[item].parent === "0" || (options.keys !== undefined && options.keys.length && options.keys.indexOf(this.data[item].parent) === -1))){
+            if(this.data[item].parent !== undefined && (parseInt(this.data[item].parent) === 0 || (options.keys !== undefined && options.keys.length && options.keys.indexOf(this.data[item].parent) === -1))){
                 var root = _el('div'),
-                    tmp = new three().init(this.data[item],options);
+                    tmp = new tree().init(this.data[item],options);
                 root.className = ' col-md-4 mrg10T ';
                 root.appendChild(tmp.el());
                 this.collection[tmp.id()] = tmp;
@@ -214,7 +258,7 @@
                     }
                 }
             } if(!Object.keys(this.data).length){ break; }
-        } console.log(this.iterate,this.data); this.data = data;
+        } console.log(this.iterate,this.data); this.data = options.data;
 
         if(options.check !== undefined && options.check.length){
             this.selectItems(options.check);
@@ -246,5 +290,5 @@
         } return result;
     };
 
-    w.t_view = new i();
+    w.t_view = i;
 })(window,document);

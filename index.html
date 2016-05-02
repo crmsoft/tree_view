@@ -1,0 +1,56 @@
+<html>
+<head>
+	<title>Tree View</title>
+</head>
+<link rel="stylesheet" type="text/css" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
+<body>
+
+	<div id="container">
+
+
+
+	</div>
+
+</body>
+
+<script type="text/javascript" src="tree.js"></script>
+<script type="text/javascript">
+	
+	var container = document.getElementById('container');
+
+	var myTree = new t_view(), counter = 0;
+
+	myTree.init({
+		debug:!0,
+		data:[
+			{
+				id: ++counter,
+				label: 'Loram '+counter,
+				parent: 0
+			},
+			{
+				id: ++counter,
+				label: 'Loram '+counter,
+				parent: 0
+			},
+			{
+				id: ++counter,
+				label: 'Loram '+counter,
+				parent: 0
+			},
+			{
+				id: ++counter,
+				label: 'Loram '+counter,
+				parent: 0
+			}
+		],
+		container: container
+	});
+
+	window.onfocus = function(){
+		console.info('reloading');
+		window.location.reload();
+	}
+</script>
+
+</html>
