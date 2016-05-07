@@ -143,7 +143,7 @@
         this.main_list.classList.add('hidden');
     };
 
-    tree.prototype.onClick = function(){
+    tree.prototype.onClick = function(e){
 
         this.expanded = !this.expanded;
         if (this.expanded) {
@@ -154,6 +154,8 @@
             this.btn.classList.remove('collapsed');
         }
 
+        if(!e) return;
+        
         for(var i=0,l=this.childNodes.length;i<l;i++){
             setTimeout(function(a,b){
                 return function(){ a.childNodes[b].onClick(); a.childNodes[b].el().classList[a.expanded ? 'add' : 'remove']('hidden') };
