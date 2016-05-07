@@ -1,0 +1,21 @@
+ol.breadcrumb{
+	margin-bottom:0;
+	padding:5px 15px;
+}
+div.dd-handle:first-child span a{
+	margin-left: -15px;
+    padding-right: 5px;
+}
+a.collapsed span.glyphicon-chevron-down{
+	display:none;
+	visibility:hidden;
+	opacity:0;
+}
+a.expanded span.glyphicon-chevron-right{
+	display:none;
+	visibility:hidden;
+	opacity:0;
+}
+li.dd-item{
+	width:100%;
+}

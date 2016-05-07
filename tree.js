@@ -29,6 +29,8 @@
         del.onclick = dCallback;
 
         b.href = 'javascript:void(0)';
+        b.innerHTML = '<span class="glyphicon glyphicon-chevron-down"></span><span class="glyphicon glyphicon-chevron-right"></span>';
+        b.setAttribute('aria-expanded','true');
         b.className = ' hidden expanded ';
         b.onclick = clb;
 
@@ -57,35 +59,13 @@
         console.info.call(console, '%c TreeJS Debug : ','background: #ff508e; color: #fff;padding:5px', t.join(' '));
     }
 
-    function extend() {
-      var a = arguments, target = a[0] || {}, i = 1, l = a.length, deep = false, options;
-
-      if (typeof target === 'boolean') {
-        deep = target;
-        target = a[1] || {};
-        i = 2;
-      }
-
-      if (typeof target !== 'object' && !isFunction(target)) target = {};
-
-      for (; i < l; ++i) {
-        if ((options = a[i]) != null) {
-          for (var name in options) {
-            var src = target[name], copy = options[name];
-
-            if (target === copy) continue;
-
-            if (deep && copy && typeof copy === 'object' && !copy.nodeType) {
-              target[name] = extend(deep, src || (copy.length != null ? [] : {}), copy);
-            } else if (copy !== undefined) {
-              target[name] = copy;
-            }
-          }
+    function extend(obj, src) {
+        for (var key in src) {
+            if (src.hasOwnProperty(key)) obj[key] = src[key];
         }
-      }
-
-      return target;
+        return obj;
     }
+
     function walk_top(n){
         var tmp = n;
         while (tmp.parents.length){
@@ -94,8 +74,16 @@
         }
     }
 
+    function unid(){
+        return 'tree-component-xxx-yxxx-x'.replace(/[xy]/g, function(c) {
+            var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+            return v.toString(16);
+        });
+    }
+
     var i = function(){}
         ,tree = function(){}
+        ,uneque = {}
         ,defaults = {
             debug:!0,
             data:[],
@@ -104,7 +92,7 @@
         };
 
     tree.prototype.init = function(obj,options){
-
+        
         var node;
 
         this.childNodes = [];
@@ -115,13 +103,20 @@
         this.checkbox_callback = typeof options.checked === 'function'?options.checked:function(){};
         this.deleteBtnCallback = typeof options.deleteButtonClick === 'function'?options.deleteButtonClick:function(){};
 
-        this.main_list.className = ' dd-list ';
+        this.main_list.className = ' dd-list breadcrumb ';
+
+
+        this.data.id = uneque[this.data.id] = this.data.self = unid();
+
+        if(this.data.parent !== undefined && !!this.data.parent){
+            this.data.parent = uneque[this.data.parent] !== undefined ? uneque[this.data.parent]:this.data.parent; 
+        }
 
         if(obj.parent === "0"){ obj.title = "<b>"+obj.title+"</b>"; }
 
-        node = c_node(obj.title,this.onClick.bind(this),this.onSelect.bind(this),this._id(),this.onDeleteHandler.bind(this));
+        node = c_node(obj.label,this.onClick.bind(this),this.onSelect.bind(this),this._id(),this.onDeleteHandler.bind(this));
 
-        node[0].id = obj.self;
+        node[0].id = obj.id;
 
         this.main_list.appendChild(node[0]);
 
@@ -153,10 +148,10 @@
         this.expanded = !this.expanded;
         if (this.expanded) {
             this.btn.classList.remove('expanded');
-            this.btn.classList.add('colapsed');
+            this.btn.classList.add('collapsed');
         }else{
             this.btn.classList.add('expanded');
-            this.btn.classList.remove('colapsed');
+            this.btn.classList.remove('collapsed');
         }
 
         for(var i=0,l=this.childNodes.length;i<l;i++){
@@ -218,7 +213,7 @@
     };
 
     tree.prototype.top = function(){
-        return this.data.top;
+        return this.data.parent;
     };
 
     tree.prototype.el = function(){
@@ -236,7 +231,7 @@
         this.iterate = 0;
 
         for(var item in this.data){
-            if(this.data[item].parent !== undefined && (parseInt(this.data[item].parent) === 0 || (options.keys !== undefined && options.keys.length && options.keys.indexOf(this.data[item].parent) === -1))){
+            if(this.data[item].parent === undefined || parseInt(this.data[item].parent) === 0 ){
                 var root = _el('div'),
                     tmp = new tree().init(this.data[item],options);
                 root.className = ' col-md-4 mrg10T ';
@@ -247,10 +242,10 @@
             }
         }
 
-        while(++this.iterate < 100){
+        while(++this.iterate < 2){
             for (var item in this.data) {
-                if (this.data[item].parent) {
-                    var tmp = new three().init(this.data[item],options);
+                if (this.data[item].parent !== undefined) {
+                    var tmp = new tree().init(this.data[item],options);
                     if (this.collection[tmp.top()]) {
                         this.collection[tmp.id()] = tmp;
                         this.collection[tmp.top()].addChild(tmp);

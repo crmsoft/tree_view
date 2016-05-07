@@ -3,6 +3,7 @@
 	<title>Tree View</title>
 </head>
 <link rel="stylesheet" type="text/css" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
+<link rel="stylesheet" type="text/css" href="tree.css">
 <body>
 
 	<div id="container">
@@ -22,34 +23,42 @@
 
 	myTree.init({
 		debug:!0,
+		checkbox:!0,
 		data:[
 			{
 				id: ++counter,
-				label: 'Loram '+counter,
-				parent: 0
+				label: 'Loram '+counter
+			},
+			{
+				id: ++counter,
+				label: 'Loram '+counter
 			},
 			{
 				id: ++counter,
 				label: 'Loram '+counter,
-				parent: 0
+				parent:2
 			},
 			{
 				id: ++counter,
 				label: 'Loram '+counter,
-				parent: 0
+				parent: 1
 			},
 			{
 				id: ++counter,
 				label: 'Loram '+counter,
-				parent: 0
+				parent: 1
+			},
+			{
+				id: ++counter,
+				label: 'Loram '+counter,
+				parent:4
 			}
 		],
 		container: container
 	});
 
 	window.onfocus = function(){
-		console.info('reloading');
-		window.location.reload();
+		//window.location.reload();
 	}
 </script>
 
