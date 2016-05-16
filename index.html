@@ -15,6 +15,7 @@
 </body>
 
 <script type="text/javascript" src="tree.js"></script>
+<script type="text/javascript" src="t.js"></script>
 <script type="text/javascript">
 	
 	var container = document.getElementById('container');
@@ -24,6 +25,26 @@
 	myTree.init({
 		debug:!0,
 		checkbox:!0,
+		collapsed:!0,
+		onChecked:function(){
+			console.log(arguments);
+		},
+		components: [
+			new myTree.component({ 
+				html:'btn 1',
+				click:function(event,c) {
+					console.log(event,c);
+				},
+				created:function( c ){
+					
+				}
+			}),
+			new myTree.component({ 
+				html:'btn 2',
+				created:function( cmp ){
+				}
+			}),
+		],
 		data:[
 			{
 				id: ++counter,

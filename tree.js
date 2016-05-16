@@ -5,18 +5,17 @@
         return d.createElement(name);
     }
 
-    function c_node(txt,clb,selected,id,dCallback){
+    function c_node(data,clb,selected,id,state){
         var li = _el('li')
             ,d = _el('div')
             ,r = _el('span')
             ,l = _el('span')
-            ,e = _el('div')
+            ,container = _el('div')
             ,c = _el('input')
-            ,del = _el('span')
             ,b = _el('a');
 
         r.className = ' node-text';
-        e.className = 'pull-right';
+        container.className = 'pull-right';
 
         c.type = 'checkbox';
         c.name = 'checked[]';
@@ -24,30 +23,23 @@
         c.onchange = selected;
         c.className = ' hidden ';
 
-        del.innerHTML = 'x';
-        del.className = ' hidden btn-danger btn btn-xs btn-small ';
-        del.onclick = dCallback;
-
         b.href = 'javascript:void(0)';
         b.innerHTML = '<span class="glyphicon glyphicon-chevron-down"></span><span class="glyphicon glyphicon-chevron-right"></span>';
-        b.setAttribute('aria-expanded','true');
-        b.className = ' hidden expanded ';
+        b.setAttribute('aria-expanded',state);
+        b.className = state ? ' hidden expanded ':' hidden collapsed ';
         b.onclick = clb;
-
 
         li.className = ' dd-item ';
         d.className = ' dd-handle ';
-        r.innerHTML = txt;
+        r.innerHTML = data.parent === undefined ? '<b>'+data.label+'</b>':data.label;
 
-
-        e.appendChild(c);
-        e.appendChild(del);
+        container.appendChild(c);
         l.appendChild(b);
         d.appendChild(l);
         d.appendChild(r);
-        d.appendChild(e);
+        d.appendChild(container);
         li.appendChild(d);
-        return [li,b,c,del];
+        return [li,b,c,container];
     };
 
     function gebi(id){
@@ -59,19 +51,50 @@
         console.info.call(console, '%c TreeJS Debug : ','background: #ff508e; color: #fff;padding:5px', t.join(' '));
     }
 
-    function extend(obj, src) {
+    function extend() {
+      var a = arguments, target = a[0] || {}, i = 1, l = a.length, deep = false, options;
+
+      if (typeof target === 'boolean') {
+        deep = target;
+        target = a[1] || {};
+        i = 2;
+      }
+
+      if (typeof target !== 'object' && (typeof target !== "function")) target = {};
+
+      for (; i < l; ++i) {
+        if ((options = a[i]) != null) {
+          for (var name in options) {
+            var src = target[name], copy = options[name];
+
+            if (target === copy) continue;
+
+            if (deep && copy && typeof copy === 'object' && !copy.nodeType) {
+              target[name] = extend(deep, src || (copy.length != null ? [] : {}), copy);
+            } else if (copy !== undefined) {
+              target[name] = copy;
+            }
+          }
+        }
+      }
+
+      return target;
+    }
+
+
+    /*function extend(obj, src) {
         for (var key in src) {
             if (src.hasOwnProperty(key)) obj[key] = src[key];
         }
         return obj;
-    }
+    }*/
 
     function walk_top(n){
         var tmp = n;
         while (tmp.parents.length){
             tmp.parents[0].childNodes.push(n);
             tmp = tmp.parents[0];
-        }
+        } 
     }
 
     function unid(){
@@ -81,11 +104,13 @@
         });
     }
 
-    var i = function(){}
-        ,tree = function(){}
+    var i = function(){ this.component = component; }
+        ,tree = function(){ }
+        ,component = function(o){ this.init(o); }
         ,uneque = {}
         ,defaults = {
             debug:!0,
+            components:[],
             data:[],
             checkbox: !1,
             container: document.getElementsByTagName('body')[0]
@@ -98,12 +123,14 @@
         this.childNodes = [];
         this.parents = [];
         this.data = obj;
+        this.depth = 1;
         this.main_list = _el('ol');
-        this.expanded = this.selected = !1;
-        this.checkbox_callback = typeof options.checked === 'function'?options.checked:function(){};
+        this.expanded = options.collapsed !== undefined ? !options.collapsed:!1;
+        this.selected = !1;
+        this.checkbox_callback = typeof options.onChecked === 'function'?options.onChecked:function(){};
         this.deleteBtnCallback = typeof options.deleteButtonClick === 'function'?options.deleteButtonClick:function(){};
-
-        this.main_list.className = ' dd-list breadcrumb ';
+        
+        this.main_list.className = (this.expanded || this.data.parent === undefined) ? ' dd-list breadcrumb ':' dd-list breadcrumb hidden ';
 
 
         this.data.id = uneque[this.data.id] = this.data.self = unid();
@@ -112,9 +139,7 @@
             this.data.parent = uneque[this.data.parent] !== undefined ? uneque[this.data.parent]:this.data.parent; 
         }
 
-        if(obj.parent === "0"){ obj.title = "<b>"+obj.title+"</b>"; }
-
-        node = c_node(obj.label,this.onClick.bind(this),this.onSelect.bind(this),this._id(),this.onDeleteHandler.bind(this));
+        node = c_node(obj,this.onClick.bind(this),this.onSelect.bind(this),this._id(),this.expanded);
 
         node[0].id = obj.id;
 
@@ -122,17 +147,23 @@
 
         this.btn = node[1];
         this.used = node[2];
-        this.deleteButton = node[3];
+        this.components = node[3];
 
         if(options.checkbox){
             this.used.classList.remove('hidden');
         }
 
-        if(options.deleteButton){
-            this.deleteButton.classList.remove('hidden');
-        }
-
         return this;
+    };
+
+    tree.prototype.initialize_conponents = function(arr){
+        for(var i=0,l=arr.length;i<l;i++){
+            if( arr[i] instanceof component ){
+                var copy = extend({},arr[i]);
+                copy.create(this);
+                this.components.appendChild( copy.container );
+            }
+        }
     };
 
     tree.prototype.onDeleteHandler = function(e){
@@ -143,24 +174,26 @@
         this.main_list.classList.add('hidden');
     };
 
-    tree.prototype.onClick = function(e){
+    tree.prototype.show = function(){
+        this.main_list.classList.remove('hidden');
+    };
 
-        this.expanded = !this.expanded;
-        if (this.expanded) {
-            this.btn.classList.remove('expanded');
-            this.btn.classList.add('collapsed');
-        }else{
-            this.btn.classList.add('expanded');
-            this.btn.classList.remove('collapsed');
+    tree.prototype.onClick = function(e,state){
+
+
+        this.btn.classList[!this.expanded ? 'add' : 'remove']('expanded');
+        this.btn.classList[this.expanded ? 'add' : 'remove']('collapsed');
+
+        this.expanded = state !== undefined ? state : !this.expanded;        
+
+        if(!e){
+            this.el().classList[this.expanded ? 'add' : 'remove']('hidden');
+            return;
         }
 
-        if(!e) return;
-        
-        for(var i=0,l=this.childNodes.length;i<l;i++){
-            setTimeout(function(a,b){
-                return function(){ a.childNodes[b].onClick(); a.childNodes[b].el().classList[a.expanded ? 'add' : 'remove']('hidden') };
-            }(this,i),(l-i)*45);
-        }
+        for (var i = this.childNodes.length - 1; i >= 0; i--) {
+            this.childNodes[i].onClick(!1,!this.expanded);
+        };
     };
 
     tree.prototype.pushParent = function(parents){
@@ -173,10 +206,10 @@
 
         if(!e) return !1;
 
-        var hashes = [this.id()];
+        var hashes = [this];
         for(var i=0,l=this.childNodes.length;i<l;i++){
             this.childNodes[i].onSelect(null,(state !== undefined ? state : this.selected));
-            hashes.push(this.childNodes[i].id());
+            hashes.push(this);
         } this.checkbox_callback(this.selected,hashes); this.checkParents();
     };
 
@@ -231,14 +264,17 @@
         this.data = options.data;
         this.collection = {};
         this.iterate = 0;
+        this.roots = {};
 
         for(var item in this.data){
             if(this.data[item].parent === undefined || parseInt(this.data[item].parent) === 0 ){
                 var root = _el('div'),
                     tmp = new tree().init(this.data[item],options);
+                    tmp.initialize_conponents(options.components);
                 root.className = ' col-md-4 mrg10T ';
                 root.appendChild(tmp.el());
                 this.collection[tmp.id()] = tmp;
+                this.roots[tmp.id()] = tmp;
                 container.appendChild(root);
                 delete this.data[item];
             }
@@ -248,6 +284,7 @@
             for (var item in this.data) {
                 if (this.data[item].parent !== undefined) {
                     var tmp = new tree().init(this.data[item],options);
+                    tmp.initialize_conponents(options.components);
                     if (this.collection[tmp.top()]) {
                         this.collection[tmp.id()] = tmp;
                         this.collection[tmp.top()].addChild(tmp);
@@ -260,7 +297,18 @@
         if(options.check !== undefined && options.check.length){
             this.selectItems(options.check);
         }
+
+        for(var r in this.roots){
+            set_depth(this.roots[r]);
+        }
     };
+
+    function set_depth(node){
+        for(var i=0,ln=node.childNodes.length; i<ln; i++){
+            node.childNodes[i].depth++;
+            set_depth(node.childNodes[i]);
+        }
+    }
 
     i.prototype.selectItems = function(arr){
         for(var i=0,l=arr.length;i<l;i++){
@@ -286,6 +334,44 @@
             }
         } return result;
     };
+
+    component.prototype.init = function(options) {
+        
+        this.options =  extend({
+            created: function(){},
+            click: function(){}
+        }, options );
+        
+        return this;
+    };
+
+    component.prototype.create = function( node ) {
+        delete this.init;
+        this.tree = node;
+        this.container = create_component( this.options, this.clickHandler );
+        this.container.onclick = function(e){ this.clickHandler(e); }.bind(this);
+        this.options.created(this,node);
+    };
+
+    component.prototype.clickHandler = function(e){
+        this.options.click(e,this);
+    }
+
+    function create_component(o){
+        var btn = _el('a')
+            ,wrap = _el('div');
+            
+            wrap.className = ' pull-right ';
+
+            wrap.id = unid();
+
+            btn.className = ' btn btn-small btn-xs ';
+            btn.innerHTML = o.html;
+
+            wrap.appendChild( btn );
+        
+        return wrap;
+    }
 
     w.t_view = i;
 })(window,document);
