@@ -1,0 +1,25 @@
+{
+  "name": "treeJS",
+  "main": "tree.js",
+  "homepage": "https://github.com/crmsoft/tree_view",
+  "authors": [
+    "Akhtem <akhtem.veliliaiev@mediatriple.com>"
+  ],
+  "description": "cunstom tree View",
+  "keywords": [
+    "tree",
+    "tree",
+    "view"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "^3.3.6"
+  }
+}
