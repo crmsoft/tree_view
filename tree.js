@@ -8,13 +8,13 @@
     function c_node(data,clb,selected,id,state){
         var li = _el('li')
             ,d = _el('div')
-            ,r = _el('span')
+            ,node_text = _el('span')
             ,l = _el('span')
             ,container = _el('div')
             ,c = _el('input')
             ,b = _el('a');
 
-        r.className = ' node-text';
+        node_text.className = ' node-text';
         container.className = 'pull-right';
 
         c.type = 'checkbox';
@@ -31,15 +31,23 @@
 
         li.className = ' dd-item ';
         d.className = ' dd-handle ';
-        r.innerHTML = data.parent === undefined ? '<b>'+data.label+'</b>':data.label;
+        node_text.innerHTML = data.parent === undefined ? '<b>'+data.label+'</b>':data.label;
 
         container.appendChild(c);
         l.appendChild(b);
         d.appendChild(l);
-        d.appendChild(r);
+        d.appendChild(node_text);
         d.appendChild(container);
         li.appendChild(d);
-        return [li,b,c,container];
+        
+        return {
+           components:container
+           ,root: _el('ol')
+           ,container:li
+           ,expander: b
+           ,checkBox: c
+           ,nodeText:node_text
+        };
     };
 
     function gebi(id){
@@ -81,7 +89,6 @@
       return target;
     }
 
-
     /*function extend(obj, src) {
         for (var key in src) {
             if (src.hasOwnProperty(key)) obj[key] = src[key];
@@ -97,8 +104,8 @@
         } 
     }
 
-    function unid(){
-        return 'tree-component-xxx-yxxx-x'.replace(/[xy]/g, function(c) {
+    function unid(prefix){
+        return prefix+'-xxx-yxxx-x'.replace(/[xy]/g, function(c) {
             var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
             return v.toString(16);
         });
@@ -118,42 +125,46 @@
 
     tree.prototype.init = function(obj,options){
         
-        var node;
-
-        this.childNodes = [];
-        this.parents = [];
+        this.collectionDrop = options.collectionDrop;
         this.data = obj;
+        this.parents = [];
+        this.components = [];
+        this.childNodes = [];
         this.depth = 1;
-        this.main_list = _el('ol');
         this.expanded = options.collapsed !== undefined ? !options.collapsed:!1;
         this.selected = !1;
         this.checkbox_callback = typeof options.onChecked === 'function'?options.onChecked:function(){};
-        this.deleteBtnCallback = typeof options.deleteButtonClick === 'function'?options.deleteButtonClick:function(){};
         
-        this.main_list.className = (this.expanded || this.data.parent === undefined) ? ' dd-list breadcrumb ':' dd-list breadcrumb hidden ';
-
-
-        this.data.id = uneque[this.data.id] = this.data.self = unid();
+        this.data.id = uneque[this.data.id] = unid('tree-item');
 
         if(this.data.parent !== undefined && !!this.data.parent){
             this.data.parent = uneque[this.data.parent] !== undefined ? uneque[this.data.parent]:this.data.parent; 
         }
 
-        node = c_node(obj,this.onClick.bind(this),this.onSelect.bind(this),this._id(),this.expanded);
+        this.dom = c_node(obj,this.onClick.bind(this),this.onSelect.bind(this),this.id(),this.expanded);
 
-        node[0].id = obj.id;
+        this.dom.container.id = obj.id;
 
-        this.main_list.appendChild(node[0]);
-
-        this.btn = node[1];
-        this.used = node[2];
-        this.components = node[3];
+        this.dom.root.className = (this.expanded || this.data.parent === undefined) ? ' dd-list breadcrumb ':' dd-list breadcrumb hidden ';
+        this.dom.root.appendChild(this.dom.container);
 
         if(options.checkbox){
-            this.used.classList.remove('hidden');
+            this.dom.checkBox.classList.remove('hidden');
         }
 
         return this;
+    };
+
+    tree.prototype.setName = function(text) {
+        this.dom.nodeText.innerHTML = text;
+    };
+
+    tree.prototype.remove_component = function(component) {
+        var index = this.components.indexOf(component);
+        if( index !== -1 ){
+            this.dom.components.removeChild(component.container);
+            this.components.splice(index,1);
+        }
     };
 
     tree.prototype.initialize_conponents = function(arr){
@@ -161,28 +172,35 @@
             if( arr[i] instanceof component ){
                 var copy = extend({},arr[i]);
                 copy.create(this);
-                this.components.appendChild( copy.container );
+                this.components.push(copy);
+                this.dom.components.appendChild( copy.container );
             }
         }
     };
 
-    tree.prototype.onDeleteHandler = function(e){
-        this.deleteBtnCallback(e,this);
+    tree.prototype.isRoot = function() {
+        return this.data.parent === undefined;
     };
 
-    tree.prototype.hide = function(){
-        this.main_list.classList.add('hidden');
-    };
+    tree.prototype.remove = function(){
+        
+        var arr = this.childNodes;
+            arr.push(this);
 
-    tree.prototype.show = function(){
-        this.main_list.classList.remove('hidden');
+        this.collectionDrop( arr );
+        if(this.isRoot()){
+            if(this.dom.root.parentNode){
+                this.dom.root.parentNode.parentNode.removeChild(this.dom.root.parentNode); return !0;
+            } return !1;
+        }else{
+            this.parents[0].removeChild(this);
+            this.dom.root.parentNode.removeChild(this.dom.root);
+            return !0;
+        }
+
     };
 
     tree.prototype.onClick = function(e,state){
-
-
-        this.btn.classList[!this.expanded ? 'add' : 'remove']('expanded');
-        this.btn.classList[this.expanded ? 'add' : 'remove']('collapsed');
 
         this.expanded = state !== undefined ? state : !this.expanded;        
 
@@ -191,8 +209,13 @@
             return;
         }
 
+        this.dom.expander.classList[this.expanded ? 'add' : 'remove']('expanded');
+        this.dom.expander.classList[!this.expanded ? 'add' : 'remove']('collapsed');
+
         for (var i = this.childNodes.length - 1; i >= 0; i--) {
-            this.childNodes[i].onClick(!1,!this.expanded);
+            if((this.childNodes[i].depth - this.depth) === 1){
+                this.childNodes[i].onClick(!1,!this.expanded);
+            }
         };
     };
 
@@ -201,8 +224,11 @@
     };
 
     tree.prototype.onSelect = function(e,state) {
+
+        if(state !== undefined && (this.selected === state)) { return !1; }
+
         this.selected = state !== undefined ? state : !this.selected;
-        this.used.checked = this.selected;
+        this.dom.checkBox.checked = this.selected;
 
         if(!e) return !1;
 
@@ -210,36 +236,56 @@
         for(var i=0,l=this.childNodes.length;i<l;i++){
             this.childNodes[i].onSelect(null,(state !== undefined ? state : this.selected));
             hashes.push(this);
-        } this.checkbox_callback(this.selected,hashes); this.checkParents();
+        } hashes = this.checkParents(hashes); this.checkbox_callback(this.selected,hashes); 
     };
 
-    tree.prototype.checkParents = function(){
-        var node =  this.parents;
+    tree.prototype.checkParents = function( arr ){
+        var node =  this.parents, prevState = !1;
         while(node.length) {
             for(var j=0,ln=node.length;j<ln;j++) {
                 for (var i = 0, count=!1, l = node[j].childNodes.length; i < l; i++) {
                     if (node[j].childNodes[i].selected) {
                         ++count;
                     }
-                }
+                } 
+                prevState = node[j].selected;
                 if(i===count){ node[j].onSelect(null, !0); }else{ node[j].onSelect(null, !1); }
+                node[j].selected !== prevState ? ( arr.push( node[j] ) ):null;
             } node = node[--j].parents;
+        } return arr;
+
+    };
+
+    tree.prototype.removeChild = function(remove){
+        
+        var p = this, rm = remove.childNodes, r_l = 0;
+        r_l = rm.length;
+        while(p){
+
+            for(var i=0,ln=p.childNodes.length;i<ln;i++){
+                for(var j=0;j<r_l;j++){
+                    if(rm[j] === p.childNodes[i]){
+                        p.childNodes.splice(i,1); break; 
+                    }
+                }
+            }
+
+            if(p.childNodes.length === 0){
+                p.dom.expander.classList.add('hidden');
+            }
+            p = p.parents[0];
         }
 
     };
 
     tree.prototype.addChild = function(clone){
-        this.btn.classList.remove('hidden');
+        this.dom.expander.classList.remove('hidden');
         clone.pushParent(this);
         walk_top(clone);
-        this.main_list.childNodes[0].appendChild(clone.el());
+        this.dom.root.childNodes[0].appendChild(clone.el());
     };
 
     tree.prototype.id = function(){
-        return this.data.self;
-    };
-
-    tree.prototype._id = function(){
         return this.data.id;
     };
 
@@ -252,8 +298,12 @@
     };
 
     tree.prototype.el = function(){
-        return this.main_list;
+        return this.dom.root;
     };
+
+
+    /**************-------------------root-------------------**************/
+
 
     i.prototype.init = function(options){
 
@@ -264,8 +314,8 @@
         this.data = options.data;
         this.collection = {};
         this.iterate = 0;
-        this.roots = {};
-
+        options.collectionDrop = this.collectionDrop.bind(this);
+        
         for(var item in this.data){
             if(this.data[item].parent === undefined || parseInt(this.data[item].parent) === 0 ){
                 var root = _el('div'),
@@ -274,7 +324,6 @@
                 root.className = ' col-md-4 mrg10T ';
                 root.appendChild(tmp.el());
                 this.collection[tmp.id()] = tmp;
-                this.roots[tmp.id()] = tmp;
                 container.appendChild(root);
                 delete this.data[item];
             }
@@ -298,16 +347,16 @@
             this.selectItems(options.check);
         }
 
-        for(var r in this.roots){
-            set_depth(this.roots[r]);
-        }
+        for(var r in this.collection){
+            this.collection[r].isRoot() && set_depth(this.collection[r]);
+        } return this;
     };
 
     function set_depth(node){
         for(var i=0,ln=node.childNodes.length; i<ln; i++){
             node.childNodes[i].depth++;
             set_depth(node.childNodes[i]);
-        }
+        } return !0;
     }
 
     i.prototype.selectItems = function(arr){
@@ -334,6 +383,30 @@
             }
         } return result;
     };
+    
+    i.prototype.collectionDrop = function(items) {
+        
+        if(items === undefined || items === null || items.length === 0){
+            return;
+        }
+
+        if(items instanceof tree){
+            items = [items];
+        }
+
+        for(var u in this.collection){
+            if(items.indexOf(this.collection[u]) !== -1){
+                delete this.collection[u];
+            }
+        }
+    };
+
+
+
+
+    /**************-------------------component-------------------**************/
+
+
 
     component.prototype.init = function(options) {
         
@@ -350,7 +423,11 @@
         this.tree = node;
         this.container = create_component( this.options, this.clickHandler );
         this.container.onclick = function(e){ this.clickHandler(e); }.bind(this);
-        this.options.created(this,node);
+        this.options.created( node );
+    };
+
+    component.prototype.remove = function(){
+        return this.tree.remove_component(this);
     };
 
     component.prototype.clickHandler = function(e){
@@ -363,7 +440,7 @@
             
             wrap.className = ' pull-right ';
 
-            wrap.id = unid();
+            wrap.id = unid('tree-component');
 
             btn.className = ' btn btn-small btn-xs ';
             btn.innerHTML = o.html;

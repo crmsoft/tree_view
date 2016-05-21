@@ -25,22 +25,25 @@
 	myTree.init({
 		debug:!0,
 		checkbox:!0,
-		collapsed:!0,
+		collapsed:!1,
 		onChecked:function(){
 			console.log(arguments);
 		},
 		components: [
 			new myTree.component({ 
-				html:'btn 1',
+				html:'<span class="glyphicon glyphicon-remove"></span>',
 				click:function(event,c) {
-					console.log(event,c);
+					c.tree.remove();
 				},
 				created:function( c ){
-					
+					console.log(c);	
 				}
 			}),
 			new myTree.component({ 
 				html:'btn 2',
+				click:function(event,c) {
+					c.remove();
+				},
 				created:function( cmp ){
 				}
 			}),
