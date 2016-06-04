@@ -7,15 +7,13 @@
 <body>
 
 	<div id="container">
-
-
-
+		
 	</div>
 
 </body>
 
+<script type="text/javascript" src="extras.js"></script>
 <script type="text/javascript" src="tree.js"></script>
-<script type="text/javascript" src="t.js"></script>
 <script type="text/javascript">
 	
 	var container = document.getElementById('container');
@@ -23,6 +21,7 @@
 	var myTree = new t_view(), counter = 0;
 
 	myTree.init({
+		rootClass: 'col-md-4 col-md-offset-4',
 		debug:!0,
 		checkbox:!0,
 		collapsed:!1,
@@ -40,7 +39,7 @@
 				}
 			}),
 			new myTree.component({ 
-				html:'btn 2',
+				html:'custom',
 				click:function(event,c) {
 					c.remove();
 				},
@@ -54,6 +53,7 @@
 				label: 'Loram '+counter
 			},
 			{
+				parent:1,
 				id: ++counter,
 				label: 'Loram '+counter
 			},
@@ -65,17 +65,73 @@
 			{
 				id: ++counter,
 				label: 'Loram '+counter,
-				parent: 1
+				parent: 3
 			},
 			{
 				id: ++counter,
 				label: 'Loram '+counter,
-				parent: 1
+				parent: 4
+			},
+			{
+				id: ++counter,
+				label: 'Loram '+counter,
+				parent:5,
+				checked: !0
+			},
+			{
+				id: ++counter,
+				label: 'Loram '+counter,
+				parent:6
+			},
+			{
+				id: ++counter,
+				parent:7,
+				label: 'Loram '+counter
+			},
+			{
+				id: ++counter,
+				parent:8,
+				label: 'Loram '+counter
+			},
+			{
+				id: ++counter,
+				label: 'Loram '+counter,
+				parent:1
+			},
+			{
+				id: ++counter,
+				label: 'Loram '+counter,
+				parent: 2
+			},
+			{
+				id: ++counter,
+				label: 'Loram '+counter,
+				parent: 3
 			},
 			{
 				id: ++counter,
 				label: 'Loram '+counter,
 				parent:4
+			},
+			{
+				id: ++counter,
+				label: 'Loram '+counter,
+				parent:5
+			},
+			{
+				id: ++counter,
+				label: 'Loram '+counter,
+				parent:6
+			},
+			{
+				id: ++counter,
+				label: 'Loram '+counter,
+				parent:7
+			},
+			{
+				id: ++counter,
+				label: 'Loram '+counter,
+				parent:8
 			}
 		],
 		container: container

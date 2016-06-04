@@ -1,116 +1,6 @@
 !(function(w,d){
     'use strict';
 
-    function _el(name){
-        return d.createElement(name);
-    }
-
-    function c_node(data,clb,selected,id,state){
-        var li = _el('li')
-            ,d = _el('div')
-            ,node_text = _el('span')
-            ,l = _el('span')
-            ,container = _el('div')
-            ,c = _el('input')
-            ,b = _el('a');
-
-        node_text.className = ' node-text';
-        container.className = 'pull-right';
-
-        c.type = 'checkbox';
-        c.name = 'checked[]';
-        c.value = id;
-        c.onchange = selected;
-        c.className = ' hidden ';
-
-        b.href = 'javascript:void(0)';
-        b.innerHTML = '<span class="glyphicon glyphicon-chevron-down"></span><span class="glyphicon glyphicon-chevron-right"></span>';
-        b.setAttribute('aria-expanded',state);
-        b.className = state ? ' hidden expanded ':' hidden collapsed ';
-        b.onclick = clb;
-
-        li.className = ' dd-item ';
-        d.className = ' dd-handle ';
-        node_text.innerHTML = data.parent === undefined ? '<b>'+data.label+'</b>':data.label;
-
-        container.appendChild(c);
-        l.appendChild(b);
-        d.appendChild(l);
-        d.appendChild(node_text);
-        d.appendChild(container);
-        li.appendChild(d);
-        
-        return {
-           components:container
-           ,root: _el('ol')
-           ,container:li
-           ,expander: b
-           ,checkBox: c
-           ,nodeText:node_text
-        };
-    };
-
-    function gebi(id){
-        return d.getElementById(id);
-    }
-
-    function log(){
-        var t = Array.prototype.slice.call(arguments);
-        console.info.call(console, '%c TreeJS Debug : ','background: #ff508e; color: #fff;padding:5px', t.join(' '));
-    }
-
-    function extend() {
-      var a = arguments, target = a[0] || {}, i = 1, l = a.length, deep = false, options;
-
-      if (typeof target === 'boolean') {
-        deep = target;
-        target = a[1] || {};
-        i = 2;
-      }
-
-      if (typeof target !== 'object' && (typeof target !== "function")) target = {};
-
-      for (; i < l; ++i) {
-        if ((options = a[i]) != null) {
-          for (var name in options) {
-            var src = target[name], copy = options[name];
-
-            if (target === copy) continue;
-
-            if (deep && copy && typeof copy === 'object' && !copy.nodeType) {
-              target[name] = extend(deep, src || (copy.length != null ? [] : {}), copy);
-            } else if (copy !== undefined) {
-              target[name] = copy;
-            }
-          }
-        }
-      }
-
-      return target;
-    }
-
-    /*function extend(obj, src) {
-        for (var key in src) {
-            if (src.hasOwnProperty(key)) obj[key] = src[key];
-        }
-        return obj;
-    }*/
-
-    function walk_top(n){
-        var tmp = n;
-        while (tmp.parents.length){
-            tmp.parents[0].childNodes.push(n);
-            tmp = tmp.parents[0];
-        } 
-    }
-
-    function unid(prefix){
-        return prefix+'-xxx-yxxx-x'.replace(/[xy]/g, function(c) {
-            var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
-            return v.toString(16);
-        });
-    }
-
     var i = function(){ this.component = component; }
         ,tree = function(){ }
         ,component = function(o){ this.init(o); }
@@ -120,7 +10,7 @@
             components:[],
             data:[],
             checkbox: !1,
-            container: document.getElementsByTagName('body')[0]
+            container: d.body
         };
 
     tree.prototype.init = function(obj,options){
@@ -135,13 +25,13 @@
         this.selected = !1;
         this.checkbox_callback = typeof options.onChecked === 'function'?options.onChecked:function(){};
         
-        this.data.id = uneque[this.data.id] = unid('tree-item');
+        this.data.id = uneque[this.data.id] = extra.unid('tree-item');
 
         if(this.data.parent !== undefined && !!this.data.parent){
             this.data.parent = uneque[this.data.parent] !== undefined ? uneque[this.data.parent]:this.data.parent; 
         }
 
-        this.dom = c_node(obj,this.onClick.bind(this),this.onSelect.bind(this),this.id(),this.expanded);
+        this.dom = extra.c_node(obj,this.onClick.bind(this),this.onSelect.bind(this),this.id(),this.expanded);
 
         this.dom.container.id = obj.id;
 
@@ -170,7 +60,7 @@
     tree.prototype.initialize_conponents = function(arr){
         for(var i=0,l=arr.length;i<l;i++){
             if( arr[i] instanceof component ){
-                var copy = extend({},arr[i]);
+                var copy = extra.extend({},arr[i]);
                 copy.create(this);
                 this.components.push(copy);
                 this.dom.components.appendChild( copy.container );
@@ -211,16 +101,14 @@
 
         this.dom.expander.classList[this.expanded ? 'add' : 'remove']('expanded');
         this.dom.expander.classList[!this.expanded ? 'add' : 'remove']('collapsed');
+        this.dom.expander.setAttribute('aria-expanded',!this.expanded ? 'false' : 'true');
+
 
         for (var i = this.childNodes.length - 1; i >= 0; i--) {
             if((this.childNodes[i].depth - this.depth) === 1){
                 this.childNodes[i].onClick(!1,!this.expanded);
             }
         };
-    };
-
-    tree.prototype.pushParent = function(parents){
-        this.parents.push(parents);
     };
 
     tree.prototype.onSelect = function(e,state) {
@@ -278,10 +166,20 @@
 
     };
 
+    tree.prototype.pushParent = function(parents){
+        this.parents.push(parents);
+    };
+
     tree.prototype.addChild = function(clone){
         this.dom.expander.classList.remove('hidden');
+        var p = this.parents[0];
         clone.pushParent(this);
-        walk_top(clone);
+        while(p){
+            clone.pushParent(p);
+            p = p.parents[0];
+        }
+        clone.depth = clone.parents.length + 1;
+        extra.append_child(clone);
         this.dom.root.childNodes[0].appendChild(clone.el());
     };
 
@@ -307,56 +205,73 @@
 
     i.prototype.init = function(options){
 
-        options = extend(defaults,options);
+        options = extra.extend(defaults,options);
 
-        log('called with options',options);
+        extra.log('called with options',options);
 
-        this.data = options.data;
-        this.collection = {};
-        this.iterate = 0;
         options.collectionDrop = this.collectionDrop.bind(this);
-        
-        for(var item in this.data){
-            if(this.data[item].parent === undefined || parseInt(this.data[item].parent) === 0 ){
-                var root = _el('div'),
-                    tmp = new tree().init(this.data[item],options);
-                    tmp.initialize_conponents(options.components);
-                root.className = ' col-md-4 mrg10T ';
-                root.appendChild(tmp.el());
-                this.collection[tmp.id()] = tmp;
-                container.appendChild(root);
-                delete this.data[item];
-            }
-        }
+        this.options = options;
+        this.collection = {};
 
-        while(++this.iterate < 2){
-            for (var item in this.data) {
-                if (this.data[item].parent !== undefined) {
-                    var tmp = new tree().init(this.data[item],options);
-                    tmp.initialize_conponents(options.components);
-                    if (this.collection[tmp.top()]) {
-                        this.collection[tmp.id()] = tmp;
-                        this.collection[tmp.top()].addChild(tmp);
-                        delete this.data[item];
-                    }
-                }
-            } if(!Object.keys(this.data).length){ break; }
-        } console.log(this.iterate,this.data); this.data = options.data;
+        this.addItems(this.options.data);
+
+        console.log(this.options.data);
 
         if(options.check !== undefined && options.check.length){
             this.selectItems(options.check);
         }
 
-        for(var r in this.collection){
-            this.collection[r].isRoot() && set_depth(this.collection[r]);
-        } return this;
+        return this;
     };
 
-    function set_depth(node){
-        for(var i=0,ln=node.childNodes.length; i<ln; i++){
-            node.childNodes[i].depth++;
-            set_depth(node.childNodes[i]);
-        } return !0;
+    i.prototype.addItems = function(data) {
+        this.collection = addItems(
+                                    this.options,
+                                    data,
+                                    this.collection
+                                  );
+    };
+
+    function addItems(options,data,coll){
+        
+        var collection = coll
+            ,iterate=0
+            ,check = [];
+
+        for(var item in data){
+            if(data[item].parent === undefined || parseInt(data[item].parent) === 0 ){
+                var root = extra._el('div'),
+                    tmp = new tree().init(data[item],options);
+                    tmp.initialize_conponents(options.components);
+                root.className = options.rootClass ? options.rootClass : ' col-md-4 mrg10T ';
+                root.appendChild(tmp.el());
+                collection[tmp.id()] = tmp;
+                container.appendChild(root);
+                data[item].checked && check.push(tmp);
+                delete data[item];
+            }
+        }
+
+        while(++iterate < 2){
+            for (var item in data) {
+                if (data[item].parent !== undefined) {
+                    var tmp = new tree().init(data[item],options);
+                    tmp.initialize_conponents(options.components);
+                    if (collection[tmp.top()]) {
+                        collection[tmp.id()] = tmp;
+                        collection[tmp.top()].addChild(tmp);
+                        data[item].checked && check.push(tmp);
+                        delete data[item];
+                    }
+                }
+            } if(!Object.keys(data).length){ break; }
+        }
+
+        for(var item in check){
+            check[item].onSelect({},!0);
+        }
+
+        return collection;
     }
 
     i.prototype.selectItems = function(arr){
@@ -402,15 +317,12 @@
     };
 
 
-
-
     /**************-------------------component-------------------**************/
-
 
 
     component.prototype.init = function(options) {
         
-        this.options =  extend({
+        this.options =  extra.extend({
             created: function(){},
             click: function(){}
         }, options );
@@ -421,7 +333,7 @@
     component.prototype.create = function( node ) {
         delete this.init;
         this.tree = node;
-        this.container = create_component( this.options, this.clickHandler );
+        this.container = extra.create_component( this.options, this.clickHandler );
         this.container.onclick = function(e){ this.clickHandler(e); }.bind(this);
         this.options.created( node );
     };
@@ -432,22 +344,6 @@
 
     component.prototype.clickHandler = function(e){
         this.options.click(e,this);
-    }
-
-    function create_component(o){
-        var btn = _el('a')
-            ,wrap = _el('div');
-            
-            wrap.className = ' pull-right ';
-
-            wrap.id = unid('tree-component');
-
-            btn.className = ' btn btn-small btn-xs ';
-            btn.innerHTML = o.html;
-
-            wrap.appendChild( btn );
-        
-        return wrap;
     }
 
     w.t_view = i;

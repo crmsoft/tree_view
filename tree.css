@@ -1,3 +1,6 @@
+.glyphicon-remove{
+	color:rgb(222,81,81);
+}
 ol.breadcrumb{
 	margin-bottom:0;
 	padding:5px 15px;
@@ -15,6 +18,9 @@ a.expanded span.glyphicon-chevron-right{
 	display:none;
 	visibility:hidden;
 	opacity:0;
+}
+.dd-handle:hover{
+	background:#fff;
 }
 li.dd-item{
 	width:100%;
